@@ -4,19 +4,33 @@ declare(strict_types=1);
 
 namespace Phalanx\Grammata;
 
-use Phalanx\Suspendable;
-use React\Promise\Deferred;
+use Phalanx\Scope\Suspendable;
+use Phalanx\Styx\Channel;
+use Phalanx\Supervisor\WaitReason;
 
 final class FilePool
 {
+    public int $activeCount {
+        get {
+            return $this->active;
+        }
+    }
+
+    public int $waitingCount {
+        get {
+            return $this->waiterCount();
+        }
+    }
+
     private int $active = 0;
 
-    /** @var list<Deferred> */
+    /** @var list<Channel> */
     private array $waiters = [];
 
     public function __construct(
         private readonly int $maxOpen = 64,
-    ) {}
+    ) {
+    }
 
     public function acquire(Suspendable $scope): void
     {
@@ -25,9 +39,12 @@ final class FilePool
             return;
         }
 
-        $deferred = new Deferred();
-        $this->waiters[] = $deferred;
-        $scope->await($deferred->promise());
+        $waiter = new Channel(bufferSize: 1);
+        $this->waiters[] = $waiter;
+        $scope->call(
+            static fn(): mixed => $waiter->next(),
+            WaitReason::custom('file.pool.acquire'),
+        );
         $this->active++;
     }
 
@@ -36,12 +53,14 @@ final class FilePool
         $this->active--;
 
         if ($this->waiters !== []) {
-            $deferred = array_shift($this->waiters);
-            $deferred->resolve(null);
+            $waiter = array_shift($this->waiters);
+            $waiter->emit(true);
+            $waiter->complete();
         }
     }
 
-    public int $activeCount { get => $this->active; }
-
-    public int $waitingCount { get => count($this->waiters); }
+    private function waiterCount(): int
+    {
+        return count($this->waiters);
+    }
 }

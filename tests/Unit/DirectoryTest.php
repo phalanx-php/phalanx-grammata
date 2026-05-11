@@ -7,17 +7,18 @@ namespace Phalanx\Grammata\Tests\Unit;
 use Phalanx\Grammata\Task\CreateDirectory;
 use Phalanx\Grammata\Task\ExistsFile;
 use Phalanx\Grammata\Task\ListDirectory;
+use Phalanx\Scope\ExecutionScope;
 use PHPUnit\Framework\TestCase;
 
 final class DirectoryTest extends TestCase
 {
     public function test_create_directory(): void
     {
-        $tmpDir = sys_get_temp_dir() . '/phalanx_test_' . bin2hex(random_bytes(4));
+        $tmpDir = sys_get_temp_dir() . '/phalanx_test_' . uniqid();
 
         try {
             $task = new CreateDirectory($tmpDir);
-            $scope = $this->createMock(\Phalanx\ExecutionScope::class);
+            $scope = $this->createStub(ExecutionScope::class);
             $task($scope);
 
             $this->assertTrue(is_dir($tmpDir));
@@ -28,11 +29,11 @@ final class DirectoryTest extends TestCase
 
     public function test_create_directory_recursive(): void
     {
-        $tmpDir = sys_get_temp_dir() . '/phalanx_test_' . bin2hex(random_bytes(4)) . '/nested/deep';
+        $tmpDir = sys_get_temp_dir() . '/phalanx_test_' . uniqid() . '/nested/deep';
 
         try {
             $task = new CreateDirectory($tmpDir, recursive: true);
-            $scope = $this->createMock(\Phalanx\ExecutionScope::class);
+            $scope = $this->createStub(ExecutionScope::class);
             $task($scope);
 
             $this->assertTrue(is_dir($tmpDir));
@@ -45,14 +46,15 @@ final class DirectoryTest extends TestCase
 
     public function test_list_directory(): void
     {
-        $tmpDir = sys_get_temp_dir() . '/phalanx_test_' . bin2hex(random_bytes(4));
+        $tmpDir = sys_get_temp_dir() . '/phalanx_test_' . uniqid();
         mkdir($tmpDir);
         touch($tmpDir . '/a.txt');
         touch($tmpDir . '/b.txt');
 
         try {
             $task = new ListDirectory($tmpDir);
-            $scope = $this->createMock(\Phalanx\ExecutionScope::class);
+
+            $scope = $this->createStub(ExecutionScope::class);
             $entries = $task($scope);
 
             $this->assertCount(2, $entries);
@@ -69,7 +71,7 @@ final class DirectoryTest extends TestCase
 
     public function test_exists_file(): void
     {
-        $scope = $this->createMock(\Phalanx\ExecutionScope::class);
+        $scope = $this->createStub(ExecutionScope::class);
 
         $this->assertTrue((new ExistsFile(__FILE__))($scope));
         $this->assertFalse((new ExistsFile('/nonexistent'))($scope));

@@ -6,6 +6,7 @@ namespace Phalanx\Grammata\Tests\Unit;
 
 use Phalanx\Grammata\Exception\FilesystemException;
 use Phalanx\Grammata\Task\WriteFile;
+use Phalanx\Scope\ExecutionScope;
 use PHPUnit\Framework\TestCase;
 
 final class WriteFileTest extends TestCase
@@ -16,7 +17,7 @@ final class WriteFileTest extends TestCase
 
         try {
             $task = new WriteFile($tmpFile, 'test content');
-            $scope = $this->createMock(\Phalanx\ExecutionScope::class);
+            $scope = $this->createStub(ExecutionScope::class);
             $task($scope);
 
             $this->assertSame('test content', file_get_contents($tmpFile));
@@ -30,7 +31,7 @@ final class WriteFileTest extends TestCase
         $this->expectException(FilesystemException::class);
 
         $task = new WriteFile('/nonexistent/dir/file.txt', 'data');
-        $scope = $this->createMock(\Phalanx\ExecutionScope::class);
+        $scope = $this->createStub(ExecutionScope::class);
         $task($scope);
     }
 }
